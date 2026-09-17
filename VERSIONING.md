@@ -1,145 +1,143 @@
 # Guia de Versionamento e Atualização
 
-Este documento explica como gerenciar versões do CMS Filament e atualizar projetos sem quebrar nada.
+Este documento explica como versionar o `vagkaefer/cms-filament` e como os
+projetos consumidores atualizam sem quebrar nada.
 
 ## Estratégia de Versionamento
 
-Usamos **[Semantic Versioning](https://semver.org/)**: `MAJOR.MINOR.PATCH`
+Usamos **[Semantic Versioning](https://semver.org/)**: `MAJOR.MINOR.PATCH`.
+
+A versão é publicada exclusivamente como **tag Git** (`vX.Y.Z`). O
+`composer.json` **não** declara o campo `version`: o Composer deriva a versão da
+tag, e `cms_filament_version()` lê o que está de fato instalado via
+`Composer\InstalledVersions`. Declarar a versão no `composer.json` criaria uma
+segunda fonte de verdade fadada a desincronizar.
 
 ### MAJOR (v2.0.0)
 
-**Breaking changes** - Requer alterações nos projetos
+**Breaking changes** — requer alterações nos projetos consumidores.
 
 **Exemplos:**
 
-- Remover métodos públicos de Services
-- Alterar estrutura de tabelas (migrations incompatíveis)
-- Mudar assinatura de métodos
-- Remover campos obrigatórios de configs
-- Alterar namespaces
-
-**Como fazer:**
-
-```bash
-# 1. Fazer as alterações
-# 2. Documentar BREAKING CHANGES no CHANGELOG.md
-# 3. Versionar
-git tag v2.0.0 -m "BREAKING: Alteração na estrutura do ModuleBuilder"
-git push origin v2.0.0
-```
+- Remover ou renomear métodos públicos do `CmsFilamentPlugin`.
+- Alterar estrutura de tabelas de forma incompatível (migrations).
+- Mudar assinatura de métodos das traits públicas (`CmsUser`,
+  `HasResourcePermissions`).
+- Remover chaves obrigatórias dos configs publicados.
+- Alterar namespaces.
 
 **Atualização nos projetos:**
 
 ```bash
 # Requer atenção manual
 composer require vagkaefer/cms-filament:^2.0
-# Seguir guia de migração na release notes
+# Seguir o guia de migração das release notes
 ```
 
-### MINOR (v1.1.0)
+### MINOR (v0.2.0, v1.1.0)
 
-**Novas funcionalidades** - Compatível com versões anteriores
+**Novas funcionalidades** — compatíveis com versões anteriores.
 
 **Exemplos:**
 
-- Adicionar novos recursos Filament
-- Novos métodos em Services (sem alterar existentes)
-- Novos campos em configs (com valores padrão)
-- Novos tipos de campo no ModuleBuilder
-- Melhorias de performance
-
-**Como fazer:**
-
-```bash
-git tag v1.1.0 -m "feat: Adiciona suporte a campo de arquivo PDF"
-git push origin v1.1.0
-```
+- Novos resources, widgets ou exports Filament.
+- Novos métodos de configuração no plugin (sem alterar os existentes).
+- Novas chaves de config com valor padrão.
+- Novos comandos Artisan.
+- Melhorias de performance.
 
 **Atualização nos projetos:**
 
 ```bash
-# Seguro, apenas atualizar
 composer update vagkaefer/cms-filament
 ```
 
-### PATCH (v1.0.1)
+### PATCH (v0.1.1)
 
-**Bug fixes** - Correções de bugs
+**Bug fixes.**
 
 **Exemplos:**
 
-- Corrigir validações
-- Corrigir geração de código
-- Corrigir migrations
-- Corrigir permissões
-
-**Como fazer:**
-
-```bash
-git tag v1.0.1 -m "fix: Corrige validação de imagem no ModuleBuilder"
-git push origin v1.0.1
-```
+- Corrigir validações ou políticas de autorização.
+- Corrigir migrations.
+- Corrigir geração de permissões (`permissions:generate-resources`).
 
 **Atualização nos projetos:**
 
 ```bash
-# Totalmente seguro
 composer update vagkaefer/cms-filament
 ```
 
-## Workflow de Release
+> **Nota sobre a série 0.x:** enquanto a versão MAJOR for `0`, o SemVer trata
+> cada MINOR como potencialmente breaking. O constraint `^0.1` aceita apenas
+> `0.1.x`. Projetos consumidores devem fixar `^0.1` até a v1.0.0.
+
+## Workflow de Release (GitFlow)
+
+`main` = produção, `develop` = integração. Releases saem de uma branch
+`release/x.y.z`.
 
 ### 1. Desenvolvimento
 
 ```bash
-# Criar branch para feature/fix
+git checkout develop
 git checkout -b feature/novo-recurso
-# Desenvolver
-git add .
+# desenvolver
 git commit -m "feat: adiciona novo recurso X"
 git push origin feature/novo-recurso
 ```
 
-### 2. Code Review & Merge
+Após review, merge em `develop`.
+
+### 2. Abrir a branch de release
 
 ```bash
-# Após aprovação
+git checkout develop
+git checkout -b release/0.2.0
+```
+
+### 3. Preparar a release
+
+- Atualizar `CHANGELOG.md`: trocar o cabeçalho da versão por
+  `## [0.2.0] - AAAA-MM-DD`.
+- Atualizar `README.md` e a matriz de compatibilidade, se a stack mudou.
+- Rodar a suíte completa:
+
+```bash
+./ci-local.sh
+```
+
+### 4. Fechar a release
+
+```bash
+# Merge em main
 git checkout main
-git merge feature/novo-recurso
+git merge --no-ff release/0.2.0
+
+# Tag na main
+git tag v0.2.0 -m "Release v0.2.0"
+git push origin main v0.2.0
+
+# Merge-back em develop
+git checkout develop
+git merge --no-ff release/0.2.0
+git push origin develop
+
+# Remover a branch de release
+git branch -d release/0.2.0
 ```
 
-### 3. Atualizar CHANGELOG.md
-
-```markdown
-## [1.1.0] - 2025-12-02
-
-### Added
-- Suporte a campo de arquivo PDF no ModuleBuilder
-- Novo recurso de exportação em massa
-
-### Changed
-- Melhorias de performance na geração de módulos
-
-### Fixed
-- Corrigido bug na validação de imagens
-```
-
-### 4. Criar Tag
+### 5. Publicar as release notes
 
 ```bash
-# Para MINOR release
-git tag v1.1.0 -m "Release v1.1.0 - Novos recursos"
-git push origin v1.1.0
-
-# Para criar release no GitHub
-gh release create v1.1.0 \
-  --title "v1.1.0 - Novos Recursos" \
-  --notes "$(cat CHANGELOG.md | sed -n '/## \[1.1.0\]/,/## \[/p' | sed '$ d')"
+gh release create v0.2.0 \
+  --title "v0.2.0" \
+  --notes "$(sed -n '/## \[0.2.0\]/,/## \[/p' CHANGELOG.md | sed '$ d')"
 ```
 
-## 🔄 Atualização de Projetos
+## Atualização de Projetos Consumidores
 
-### Cenário 1: Atualização Simples (PATCH/MINOR)
+### Cenário 1: Atualização simples (PATCH/MINOR)
 
 ```bash
 cd /caminho/do/projeto
@@ -148,180 +146,92 @@ php artisan migrate
 php artisan optimize:clear
 ```
 
-### Cenário 2: Atualização com Breaking Changes (MAJOR)
+### Cenário 2: Atualização com breaking changes (MAJOR)
 
 ```bash
-# 1. Ler release notes
-# 2. Fazer backup
+# 1. Ler as release notes
+# 2. Backup
 php artisan backup:run
 php artisan down
 
-# 3. Atualizar composer.json
-"vagkaefer/cms-filament": "^2.0"
-
-# 4. Atualizar
+# 3. Ajustar o constraint no composer.json
+#    "vagkaefer/cms-filament": "^2.0"
 composer update vagkaefer/cms-filament
 
-# 5. Seguir guia de migração específico da versão
-# 6. Testar
+# 4. Seguir o guia de migração da versão
+# 5. Republicar os configs, se houver novas chaves
+php artisan vendor:publish --tag=cms-filament-config --force
+
+# 6. Migrations e testes
+php artisan migrate
 php artisan test
 
-# 7. Publicar novos configs (se houver)
-php artisan vendor:publish --tag=cms-config --force
-
-# 8. Executar migrations
-php artisan migrate
-
-# 9. Voltar online
 php artisan up
 ```
 
 ### Cenário 3: Rollback
 
-Se algo der errado:
-
 ```bash
-# 1. Voltar para versão anterior
-composer require vagkaefer/cms-filament:1.0.5
-
-# 2. Reverter migrations (se necessário)
-php artisan migrate:rollback
-
-# 3. Restaurar backup
+composer require vagkaefer/cms-filament:0.1.0
+php artisan migrate:rollback   # se a versão nova trouxe migrations
 php artisan backup:restore
 ```
 
-## 🛡️ Proteções Contra Breaking Changes
+## Proteções Contra Breaking Changes
 
-### 1. Usar Constraints de Versão
+### 1. Constraints de versão
 
-No `composer.json` do projeto:
+No `composer.json` do projeto consumidor:
 
 ```json
 {
     "require": {
-        "vagkaefer/cms-filament": "^1.0"
+        "vagkaefer/cms-filament": "^0.1"
     }
 }
 ```
 
-Isso significa:
+Na série `0.x`, `^0.1` aceita `0.1.x` e rejeita `0.2.0`. A partir da v1.0.0,
+`^1.0` aceita toda a série `1.x` e rejeita `2.0.0`.
 
-- ✅ Aceita: `1.0.x`, `1.1.x`, `1.9.x`
-- ❌ Rejeita: `2.0.0` (protege contra breaking changes)
+### 2. Lock file
 
-### 2. Lock File
+O `composer.lock` do projeto consumidor garante que todos os ambientes usem a
+mesma versão. Deve ser commitado.
 
-O `composer.lock` garante que todos usem a mesma versão:
+### 3. CI com testes
 
-```bash
-# Commit o composer.lock
-git add composer.lock
-git commit -m "Lock CMS Filament version"
-```
+Os 5 workflows do GitHub Actions (`pint`, `phpcs`, `phpms`, `phpstan`,
+`phpunit`) rodam em todo push e pull request. Localmente, `./ci-local.sh`
+espelha o CI.
 
-### 3. CI/CD com Testes
+## Matriz de Compatibilidade
 
-Configure testes automatizados antes de fazer deploy:
+| CMS Filament | PHP   | Laravel  | Filament |
+| ------------ | ----- | -------- | -------- |
+| 0.1.x        | ^8.4  | 12 / 13  | ^5.0     |
 
-```yaml
-# .github/workflows/test.yml
-name: Tests
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Run Tests
-        run: |
-          composer install
-          php artisan test
-```
+## Tags de Publish
 
-## 📊 Matriz de Compatibilidade
+| Tag                         | Conteúdo             |
+| --------------------------- | -------------------- |
+| `cms-filament-config`       | Arquivos de config   |
+| `cms-filament-migrations`   | Migrations           |
 
-| CMS Filament | Laravel | Filament | PHP  |
-| -------- | ------- | -------- | ---- |
-| 1.x      | ^12.0   | ^4.0     | ^8.5 |
-| 2.x      | ^12.0   | ^4.0     | ^8.5 |
+## Checklist de Release
 
-## 🚨 Checklist de Release
-
-Antes de criar uma nova versão:
-
-- [ ] Todos os testes passando
-- [ ] CHANGELOG.md atualizado
-- [ ] README.md atualizado (se necessário)
-- [ ] Documentação atualizada
+- [ ] `./ci-local.sh` sem falhas
+- [ ] `CHANGELOG.md` atualizado com data da release
+- [ ] `README.md` atualizado (se necessário)
 - [ ] Breaking changes documentados
-- [ ] Migration guide criado (para MAJOR)
-- [ ] Versão testada em projeto real
-- [ ] Tag criada com mensagem descritiva
+- [ ] Guia de migração escrito (para MAJOR)
+- [ ] Matriz de compatibilidade conferida
+- [ ] Versão testada em um projeto real
+- [ ] Tag `vX.Y.Z` criada na `main`
+- [ ] Merge-back em `develop`
 - [ ] Release notes publicadas
 
-## 📝 Comunicação de Updates
-
-### Para PATCH/MINOR (seguro)
-
-Email/Slack:
-
-```
-📢 Nova versão disponível: CMS Filament v1.1.0
-
-✨ Novidades:
-- Suporte a campo PDF
-- Melhorias de performance
-
-🔧 Como atualizar:
-composer update vagkaefer/cms-filament
-php artisan migrate
-
-📖 Changelog: https://github.com/vagkaefer/cms-filament/releases/v1.1.0
-```
-
-### Para MAJOR (atenção!)
-
-Email/Slack:
-
-```
-⚠️ BREAKING CHANGES: CMS Filament v2.0.0
-
-🚨 Esta versão requer atenção ao atualizar!
-
-🔴 Breaking Changes:
-- Alteração na estrutura do ModuleBuilder
-- Novos campos obrigatórios em configs
-
-📖 Guia de Migração OBRIGATÓRIO:
-https://github.com/vagkaefer/cms-filament/wiki/Migrate-to-v2
-
-⏰ Agende a atualização com cuidado!
-```
-
-## 🔍 Monitoramento
-
-### Verificar versões em uso
-
-```bash
-# Criar script para verificar versões em todos os projetos
-#!/bin/bash
-for dir in /var/www/*/; do
-    cd "$dir"
-    VERSION=$(composer show vagkaefer/cms-filament | grep 'versions' | awk '{print $3}')
-    echo "$dir: $VERSION"
-done
-```
-
-### Dashboard de Versões
-
-Considere criar um dashboard interno que mostra:
-
-- Qual versão cada projeto está usando
-- Alertas de versões desatualizadas
-- Security advisories
-
-## 📚 Recursos Adicionais
+## Recursos Adicionais
 
 - [Semantic Versioning](https://semver.org/)
 - [Keep a Changelog](https://keepachangelog.com/)
