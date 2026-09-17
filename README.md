@@ -36,8 +36,12 @@ demais sessões quando a senha muda.
 ## Instalação
 
 ```bash
-composer require vagkaefer/cms-filament
+composer require vagkaefer/cms-filament:^0.1
 ```
+
+Na série `0.x`, `^0.1` aceita apenas `0.1.x`. Cada MINOR pode trazer breaking
+changes até a v1.0.0, então fixe o constraint e leia as release notes antes de
+subir de série.
 
 Durante o desenvolvimento, via repositório local:
 
