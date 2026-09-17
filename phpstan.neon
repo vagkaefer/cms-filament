@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - src
+
+    # Arquivos de configuração publicáveis: são arrays declarativos com env(),
+    # que o Larastan sinaliza fora de um app real.
+    excludePaths:
+        - src/Config/*
+
+    bootstrapFiles:
+        - src/helpers.php
+
+    ignoreErrors:
+        # A trait é usada pelo model de usuário do projeto consumidor, que por
+        # definição não existe dentro do package.
+        - identifier: trait.unused

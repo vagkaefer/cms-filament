@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<ruleset name="CMS Filament">
+    <description>PSR-12 coding standard for the vagkaefer/cms-filament package.</description>
+
+    <arg name="basepath" value="."/>
+    <arg name="colors"/>
+    <arg name="extensions" value="php"/>
+
+    <!-- Só errors bloqueiam o build; warnings (ex.: linhas longas em código
+         legado do Filament) ficam visíveis mas não falham o CI. -->
+    <config name="ignore_warnings_on_exit" value="1"/>
+
+    <file>src</file>
+    <file>tests</file>
+
+    <rule ref="PSR12"/>
+
+    <!-- Blades não são PHP puro; ficam fora do PSR-12. -->
+    <exclude-pattern>*.blade.php</exclude-pattern>
+
+    <!-- Configs publicáveis vêm dos packages de origem; mantidas próximas da fonte. -->
+    <exclude-pattern>src/Config/*</exclude-pattern>
+</ruleset>
