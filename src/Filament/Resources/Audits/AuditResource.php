@@ -7,6 +7,7 @@ use Filament\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Support\Arr;
+use VagKaefer\CmsFilament\Support\ProtectedUsers;
 use UnitEnum;
 use Tapp\FilamentAuditing\Concerns\HasExtraColumns;
 use Tapp\FilamentAuditing\Concerns\HasFormattedData;
@@ -39,6 +40,46 @@ class AuditResource extends BaseAuditResource
         return config('cms-filament.navigation_group');
     }
 
+    /**
+     * Some com as linhas atribuídas às contas protegidas.
+     *
+     * A coluna `user.name` revelaria o nome delas a qualquer admin do projeto
+     * consumidor, que é justamente quem não deve enxergá-las. As linhas sem
+     * usuário (ações do próprio sistema) continuam visíveis.
+     *
+     * @param  \Illuminate\Contracts\Database\Eloquent\Builder  $query
+     */
+    public static function hideProtectedUsersTrail($query): void
+    {
+        if (! ProtectedUsers::hidesFrom()) {
+            return;
+        }
+
+        /** @var class-string<\Illuminate\Database\Eloquent\Model> $userModel */
+        $userModel = cms_filament_user_model();
+        $user = new $userModel();
+
+        $protectedIds = $userModel::query()
+            ->where(function ($query): void {
+                foreach (ProtectedUsers::DOMAINS as $domain) {
+                    $query->orWhere('email', 'like', '%@' . $domain);
+                }
+            })
+            ->pluck($user->getKeyName());
+
+        if ($protectedIds->isEmpty()) {
+            return;
+        }
+
+        // O `whereNull` é obrigatório: em SQL, `user_id NOT IN (...)` é NULL —
+        // e não verdadeiro — quando `user_id` é nulo, o que sumiria também com
+        // as ações do próprio sistema.
+        $query->where(function ($query) use ($protectedIds): void {
+            $query->whereNull('user_id')
+                ->orWhereNotIn('user_id', $protectedIds);
+        });
+    }
+
     public static function table(Table $table): Table
     {
         // Recria a tabela completamente para evitar carregar 'auditable' que pode não existir
@@ -50,6 +91,8 @@ class AuditResource extends BaseAuditResource
                         config('filament-auditing.audits_sort.column'),
                         config('filament-auditing.audits_sort.direction')
                     );
+
+                static::hideProtectedUsersTrail($query);
             })
             ->emptyStateHeading(trans('filament-auditing::filament-auditing.table.empty_state_heading'))
             ->columns(Arr::flatten([

@@ -5,12 +5,31 @@ namespace VagKaefer\CmsFilament\Filament\Exports;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
 use Filament\Actions\Exports\Models\Export;
+use Illuminate\Database\Eloquent\Builder;
+use VagKaefer\CmsFilament\Support\ProtectedUsers;
 
 class UserExporter extends Exporter
 {
     public static function getModel(): string
     {
         return cms_filament_user_model();
+    }
+
+    /**
+     * Mantém as contas protegidas fora do arquivo exportado.
+     *
+     * O export do Filament roda em fila, sem usuário autenticado: ali
+     * `ProtectedUsers::hidesFrom()` é `true` e nada protegido sai, mesmo que a
+     * seleção original tenha vindo de outro contexto.
+     *
+     * @param  Builder<*>  $query
+     * @return Builder<*>
+     */
+    public static function modifyQuery(Builder $query): Builder
+    {
+        ProtectedUsers::scopeVisible($query);
+
+        return $query;
     }
 
     /**
