@@ -74,3 +74,7 @@ carregadas automaticamente; rode `php artisan migrate`.
 - Chaves listadas em `cms-filament.configurations.encrypted_keys` nunca são
   exibidas na tela de Configurações: salvar o campo em branco mantém o valor.
 - Backup com dump de banco exige o binário do cliente no servidor.
+- Contas de e-mail em `@cloudger.com.br`, `@cloudger.host` e `@kaefer.eng.br` são
+  as do fornecedor: só aparecem e só podem ser administradas entre si. Para
+  qualquer outro usuário — inclusive quem tem o cargo administrativo — elas não
+  existem na tela de Usuários, na busca global, no export nem na auditoria.
