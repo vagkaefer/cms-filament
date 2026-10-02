@@ -34,7 +34,13 @@ banco próprio nem frontend toolchain. A UI vem do **Filament 5** e seus plugins
   stechstudio/filament-impersonate `^5`, achyutn/filament-log-viewer,
   pxlrbt/filament-environment-indicator.
 - **MFA é o nativo do Filament 5** (`AppAuthentication`, `EmailAuthentication`).
-  Não há package de 2FA de terceiros nem passkeys.
+  Não há package de 2FA de terceiros.
+- **Passkeys com spatie/laravel-passkeys direto**, sem o plugin
+  stephenjude/filament-two-factor-authentication que o cms-core usava. Ele traria
+  outro TOTP e as colunas `two_factor_*`, duplicando o MFA nativo. As peças são:
+  `Http/Controllers/PasskeyLoginController`, `Livewire/PasskeysManager`,
+  `Filament/Pages/Auth/EditProfile` e `Actions/Passkeys/ConfigurePasskeyCeremonies`.
+  O JS (`@simplewebauthn/browser` UMD) fica vendorizado em `src/Resources/dist`.
 - **Sem Docker.** `composer`, `phpunit` e `./ci-local.sh` rodam direto no host.
 - `require-dev`: orchestra/testbench `^11`, phpunit, pint, larastan, phpmd, phpcs.
 

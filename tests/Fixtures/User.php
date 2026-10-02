@@ -8,13 +8,14 @@ use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
 use Filament\Models\Contracts\FilamentUser;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use OwenIt\Auditing\Contracts\Auditable;
+use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
 use VagKaefer\CmsFilament\Models\Concerns\CmsUser;
 
 /**
  * Usuário de um projeto consumidor típico: tabela `users` padrão do Laravel,
  * id inteiro, usando a trait do package.
  */
-class User extends Authenticatable implements Auditable, FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
+class User extends Authenticatable implements Auditable, FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication, HasPasskeys
 {
     use CmsUser;
 

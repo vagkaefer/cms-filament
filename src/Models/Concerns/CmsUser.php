@@ -8,14 +8,15 @@ use Filament\Auth\MultiFactor\Email\Concerns\InteractsWithEmailAuthentication;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Model;
 use OwenIt\Auditing\Auditable;
+use Spatie\LaravelPasskeys\Models\Concerns\InteractsWithPasskeys;
 use Spatie\Permission\Traits\HasRoles;
 
 /**
  * Habilita um model de usuário do projeto consumidor no painel do package.
  *
- * Agrega cargos/permissões (Spatie), auditoria (owen-it) e a autenticação em
- * dois fatores nativa do Filament, além da flag `active` que controla o acesso
- * ao painel.
+ * Agrega cargos/permissões (Spatie), auditoria (owen-it), a autenticação em
+ * dois fatores nativa do Filament e as passkeys (spatie/laravel-passkeys),
+ * além da flag `active` que controla o acesso ao painel.
  *
  * O model que usa esta trait precisa declarar os contratos correspondentes:
  *
@@ -24,16 +25,21 @@ use Spatie\Permission\Traits\HasRoles;
  *     use Filament\Auth\MultiFactor\Email\Contracts\HasEmailAuthentication;
  *     use Filament\Models\Contracts\FilamentUser;
  *     use OwenIt\Auditing\Contracts\Auditable as AuditableContract;
+ *     use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
  *
  *     class User extends Authenticatable implements AuditableContract, FilamentUser,
- *         HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication
+ *         HasAppAuthentication, HasAppAuthenticationRecovery, HasEmailAuthentication,
+ *         HasPasskeys
  *     {
  *         use CmsUser;
  *     }
  *
+ * `HasPasskeys` é o que liga o login por passkey: sem ele o plugin não mostra
+ * o botão nem a gestão no perfil.
+ *
  * As colunas exigidas (`active`, `app_authentication_secret`,
- * `app_authentication_recovery_codes`, `has_email_authentication`) são criadas
- * pela migration do package.
+ * `app_authentication_recovery_codes`, `has_email_authentication`) e a tabela
+ * `passkeys` são criadas pelas migrations do package.
  *
  * @property bool $active
  *
@@ -46,6 +52,7 @@ trait CmsUser
     use InteractsWithAppAuthentication;
     use InteractsWithAppAuthenticationRecovery;
     use InteractsWithEmailAuthentication;
+    use InteractsWithPasskeys;
 
     /**
      * Acrescenta cast e mass assignment da flag `active` sem exigir que o

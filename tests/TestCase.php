@@ -16,6 +16,7 @@ use Filament\Widgets\WidgetsServiceProvider;
 use Illuminate\Foundation\Application;
 use Livewire\LivewireServiceProvider;
 use OwenIt\Auditing\AuditingServiceProvider;
+use Spatie\LaravelPasskeys\LaravelPasskeysServiceProvider;
 use Spatie\Permission\PermissionServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use VagKaefer\CmsFilament\Providers\CmsFilamentServiceProvider;
@@ -37,8 +38,13 @@ abstract class TestCase extends Orchestra
         return [
             BladeIconsServiceProvider::class,
             BladeHeroiconsServiceProvider::class,
-            LivewireServiceProvider::class,
+            // O Filament troca o DataStore do Livewire com um bind(): se vier
+            // depois, o bind derruba a instância já registrada pelo Livewire,
+            // cada componente passa a ver um DataStore novo e qualquer
+            // renderização quebra no error bag. É a ordem da descoberta
+            // automática num app real (filament/* antes de livewire/*).
             SupportServiceProvider::class,
+            LivewireServiceProvider::class,
             ActionsServiceProvider::class,
             FormsServiceProvider::class,
             InfolistsServiceProvider::class,
@@ -49,6 +55,7 @@ abstract class TestCase extends Orchestra
             FilamentServiceProvider::class,
             PermissionServiceProvider::class,
             AuditingServiceProvider::class,
+            LaravelPasskeysServiceProvider::class,
             CmsFilamentServiceProvider::class,
         ];
     }
