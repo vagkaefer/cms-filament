@@ -2,13 +2,22 @@
 
 namespace VagKaefer\CmsFilament\Providers;
 
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Contracts\Auth\Access\Gate;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
+use Spatie\LaravelPasskeys\Actions\ConfigureCeremonyStepManagerFactoryAction as SpatieCeremonyAction;
+use Spatie\LaravelPasskeys\Actions\GeneratePasskeyRegisterOptionsAction as SpatieRegisterOptionsAction;
+use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
+use VagKaefer\CmsFilament\Actions\Passkeys\ConfigurePasskeyCeremonies;
+use VagKaefer\CmsFilament\Actions\Passkeys\GeneratePasskeyRegisterOptions;
 use VagKaefer\CmsFilament\Console\Commands\AiSetupCommand;
 use VagKaefer\CmsFilament\Console\Commands\CleanLargeLogFile;
 use VagKaefer\CmsFilament\Console\Commands\CleanOldLogs;
 use VagKaefer\CmsFilament\Console\Commands\GenerateResourcePermissions;
+use VagKaefer\CmsFilament\Livewire\PasskeysManager;
 use VagKaefer\CmsFilament\Models\Audit;
 use VagKaefer\CmsFilament\Models\Concerns\CmsUser;
 use VagKaefer\CmsFilament\Models\Permission;
@@ -43,6 +52,7 @@ class CmsFilamentServiceProvider extends ServiceProvider
 
         $this->registerAdminGate();
         $this->registerUserObserver();
+        $this->registerPasskeys();
 
         if ($this->app->runningInConsole()) {
             $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
@@ -120,6 +130,59 @@ class CmsFilamentServiceProvider extends ServiceProvider
         }
 
         $model::observe(UserObserver::class);
+    }
+
+    /**
+     * Login por passkey (spatie/laravel-passkeys).
+     *
+     * A config do spatie é ajustada aqui, no boot, e não no register: o
+     * provider dele funde a config dele no register, e um merge raso feito
+     * antes trocaria o array inteiro de `actions` ou `relying_party` pelo nosso.
+     *
+     * Cada chave só é trocada enquanto está no default, então uma config
+     * `passkeys.php` publicada e customizada pelo projeto é mantida.
+     */
+    protected function registerPasskeys(): void
+    {
+        Livewire::component('cms-filament.passkeys-manager', PasskeysManager::class);
+
+        // O @simplewebauthn/browser vai pronto no package (UMD, expõe
+        // window.SimpleWebAuthnBrowser): sem build de JS aqui nem no projeto.
+        // O `filament:upgrade` do composer o publica em public/js.
+        FilamentAsset::register([
+            Js::make('passkeys', __DIR__ . '/../Resources/dist/simplewebauthn-browser.umd.min.js'),
+        ], package: 'vagkaefer/cms-filament');
+
+        $model = cms_filament_user_model();
+
+        if (! is_subclass_of($model, HasPasskeys::class)) {
+            return;
+        }
+
+        $authenticatable = config('passkeys.models.authenticatable');
+
+        if (! is_string($authenticatable) || ! is_subclass_of($authenticatable, HasPasskeys::class)) {
+            config(['passkeys.models.authenticatable' => $model]);
+        }
+
+        $relyingPartyId = config('cms-filament.passkeys.rp_id');
+
+        if (filled($relyingPartyId)) {
+            config(['passkeys.relying_party.id' => $relyingPartyId]);
+        }
+
+        $actions = [
+            'configure_ceremony_step_manager_factory' => [SpatieCeremonyAction::class, ConfigurePasskeyCeremonies::class],
+            'generate_passkey_register_options' => [SpatieRegisterOptionsAction::class, GeneratePasskeyRegisterOptions::class],
+        ];
+
+        foreach ($actions as $name => [$vendorDefault, $ours]) {
+            $current = config("passkeys.actions.{$name}");
+
+            if ($current === null || $current === $vendorDefault) {
+                config(["passkeys.actions.{$name}" => $ours]);
+            }
+        }
     }
 
     /**

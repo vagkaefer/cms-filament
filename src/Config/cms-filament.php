@@ -74,6 +74,21 @@ return [
     ],
 
     /**
+     * Login por passkey (WebAuthn), via spatie/laravel-passkeys.
+     */
+    'passkeys' => [
+        /**
+         * Domínio ao qual as passkeys ficam presas (Relying Party ID).
+         *
+         * Vazio usa o host do APP_URL. Prefira o domínio registrável
+         * (`exemplo.com.br`): uma passkey criada nele vale para os subdomínios
+         * (`www.`, `novo.`), mas uma criada em `novo.exemplo.com.br` deixa de
+         * valer quando o site muda para `exemplo.com.br`.
+         */
+        'rp_id' => env('PASSKEYS_RP_ID'),
+    ],
+
+    /**
      * Versão do package instalado, exibida no rodapé e no widget de versão.
      */
     'version' => cms_filament_version(),

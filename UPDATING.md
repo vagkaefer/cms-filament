@@ -8,6 +8,19 @@ php artisan migrate
 As migrations novas são carregadas automaticamente pelo provider — não é preciso
 republicar nada para obtê-las.
 
+## 0.1.2: login por passkey
+
+Depois do `migrate`, que cria a tabela `passkeys`, declare o contrato no User:
+
+```php
+use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
+
+class User extends Authenticatable implements /* ... */ HasPasskeys
+```
+
+Em produção, defina `PASSKEYS_RP_ID` com o domínio registrável (`exemplo.com.br`).
+Sem o contrato, nada muda: o botão e a seção no perfil não aparecem.
+
 ## Quando republicar as configs
 
 Só se você publicou as configs e quer trazer as mudanças do package:

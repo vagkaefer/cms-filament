@@ -5,7 +5,10 @@ namespace VagKaefer\CmsFilament\Tests\Feature;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\Email\EmailAuthentication;
 use Filament\Panel;
+use Filament\Auth\Pages\EditProfile as FilamentEditProfile;
+use Illuminate\Foundation\Auth\User as PlainUser;
 use VagKaefer\CmsFilament\CmsFilamentPlugin;
+use VagKaefer\CmsFilament\Filament\Pages\Auth\EditProfile;
 use VagKaefer\CmsFilament\Filament\Resources\Audits\AuditResource;
 use VagKaefer\CmsFilament\Filament\Resources\Configurations\ConfigurationResource;
 use VagKaefer\CmsFilament\Filament\Resources\Permissions\PermissionResource;
@@ -88,5 +91,54 @@ class PluginRegistersComponentsTest extends TestCase
         $this->assertFalse(CmsFilamentPlugin::make()->hasUserExport());
         $this->assertTrue(CmsFilamentPlugin::make()->userExport()->hasUserExport());
         $this->assertFalse(UserResource::userExportEnabled());
+    }
+
+    public function testPasskeysUseTheProfileWithThePasskeysSection(): void
+    {
+        $plugin = CmsFilamentPlugin::make();
+        $panel = $this->panelWith($plugin);
+
+        $this->assertTrue($plugin->hasPasskeys());
+        $this->assertSame(EditProfile::class, $panel->getProfilePage());
+    }
+
+    public function testPasskeysWorkWithoutTheSecondFactor(): void
+    {
+        $panel = $this->panelWith(CmsFilamentPlugin::make()->multiFactorAuthentication(false));
+
+        // Sem MFA, o perfil continua existindo: é onde se cadastra a passkey.
+        $this->assertSame(EditProfile::class, $panel->getProfilePage());
+    }
+
+    public function testPasskeysCanBeTurnedOff(): void
+    {
+        $plugin = CmsFilamentPlugin::make()->passkeys(false);
+        $panel = $this->panelWith($plugin);
+
+        $this->assertFalse($plugin->hasPasskeys());
+        $this->assertSame(FilamentEditProfile::class, $panel->getProfilePage());
+    }
+
+    public function testPasskeysStayOffWhenTheUserModelDoesNotDeclareTheContract(): void
+    {
+        // Projeto que atualizou o package sem pôr HasPasskeys no User.
+        config(['auth.providers.users.model' => PlainUser::class]);
+
+        $plugin = CmsFilamentPlugin::make();
+        $panel = $this->panelWith($plugin);
+
+        $this->assertFalse($plugin->hasPasskeys());
+        $this->assertSame(FilamentEditProfile::class, $panel->getProfilePage());
+    }
+
+    public function testProjectProfilePageIsKept(): void
+    {
+        $panel = Panel::make()
+            ->id('admin-' . uniqid())
+            ->path('painel')
+            ->profile(FilamentEditProfile::class)
+            ->plugin(CmsFilamentPlugin::make());
+
+        $this->assertSame(FilamentEditProfile::class, $panel->getProfilePage());
     }
 }

@@ -30,7 +30,30 @@ O package **não tem painel próprio**. Ele entra como plugin no painel do proje
 O model de usuário é o do projeto (`config('auth.providers.users.model')`) e usa
 a trait `VagKaefer\CmsFilament\Models\Concerns\CmsUser`, declarando os contratos
 `FilamentUser`, `HasAppAuthentication`, `HasAppAuthenticationRecovery`,
-`HasEmailAuthentication` e `Auditable`.
+`HasEmailAuthentication`, `HasPasskeys` (spatie/laravel-passkeys) e `Auditable`.
+
+## Login por passkey
+
+São dois caminhos que convivem: e-mail + senha + segundo fator, ou passkey. Quem
+entra com passkey não digita o código do 2FA, porque a passkey já é posse do
+aparelho + biometria ou PIN. A gestão fica no Perfil, abaixo do segundo fator.
+
+- **Liga sozinho** quando o User declara `HasPasskeys`. Sem o contrato, o plugin
+  não mostra o botão nem a seção no perfil. Para desligar com o contrato
+  declarado, use `->passkeys(false)`.
+- **Domínio:** `PASSKEYS_RP_ID` no `.env`, e vazio usa o host do `APP_URL`. Use o
+  domínio registrável (`exemplo.com.br`): uma passkey criada nele vale para
+  `www.` e para outros subdomínios. Uma criada em `novo.exemplo.com.br` morre
+  quando o site muda de endereço.
+- **HTTPS obrigatório**, exceto em `localhost`, que o package libera para
+  desenvolvimento.
+- **Perfil próprio:** se o painel declara `->profile(MinhaPagina::class)`, o
+  plugin não troca. Acrescente `Livewire::make(\VagKaefer\CmsFilament\Livewire\PasskeysManager::class)`
+  no `content()` da página.
+- **Asset JS:** o `@simplewebauthn/browser` vai pronto no package e é publicado
+  em `public/js/vagkaefer/cms-filament/` pelo `php artisan filament:assets`
+  (que o `filament:upgrade` do composer já roda).
+- O login por passkey respeita `canAccessPanel()`: conta inativa não entra.
 
 ## Autorização de Resources do projeto
 

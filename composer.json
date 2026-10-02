@@ -26,6 +26,7 @@
         "owen-it/laravel-auditing": "^14.0",
         "pxlrbt/filament-environment-indicator": "^3.6",
         "shuvroroy/filament-spatie-laravel-backup": "^4.0",
+        "spatie/laravel-passkeys": "^1.8",
         "spatie/laravel-permission": "^8.0",
         "stechstudio/filament-impersonate": "^5.0",
         "tapp/filament-auditing": "^4.1"

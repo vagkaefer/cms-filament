@@ -5,20 +5,26 @@ namespace VagKaefer\CmsFilament;
 use AchyutN\FilamentLogViewer\FilamentLogViewer;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Auth\MultiFactor\Email\EmailAuthentication;
+use Filament\Auth\Pages\EditProfile as FilamentEditProfile;
 use Filament\Contracts\Plugin;
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\Support\Colors\Color;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Route;
 use pxlrbt\FilamentEnvironmentIndicator\EnvironmentIndicatorPlugin;
 use ShuvroRoy\FilamentSpatieLaravelBackup\FilamentSpatieLaravelBackupPlugin;
+use Spatie\LaravelPasskeys\Http\Controllers\GeneratePasskeyAuthenticationOptionsController;
+use Spatie\LaravelPasskeys\Models\Concerns\HasPasskeys;
+use VagKaefer\CmsFilament\Filament\Pages\Auth\EditProfile;
 use VagKaefer\CmsFilament\Filament\Resources\Audits\AuditResource;
 use VagKaefer\CmsFilament\Filament\Resources\Configurations\ConfigurationResource;
 use VagKaefer\CmsFilament\Filament\Resources\Permissions\PermissionResource;
 use VagKaefer\CmsFilament\Filament\Resources\Roles\RoleResource;
 use VagKaefer\CmsFilament\Filament\Resources\Users\UserResource;
 use VagKaefer\CmsFilament\Filament\Widgets\CmsVersionWidget;
+use VagKaefer\CmsFilament\Http\Controllers\PasskeyLoginController;
 
 /**
  * Registra as telas administrativas do package em um painel do projeto.
@@ -42,6 +48,8 @@ class CmsFilamentPlugin implements Plugin
     protected bool $logViewer = true;
 
     protected bool $multiFactorAuthentication = true;
+
+    protected bool $passkeys = true;
 
     protected bool $profile = true;
 
@@ -115,6 +123,13 @@ class CmsFilamentPlugin implements Plugin
         return $this;
     }
 
+    public function passkeys(bool $condition = true): static
+    {
+        $this->passkeys = $condition;
+
+        return $this;
+    }
+
     public function profile(bool $condition = true): static
     {
         $this->profile = $condition;
@@ -146,6 +161,18 @@ class CmsFilamentPlugin implements Plugin
     public function hasUserExport(): bool
     {
         return $this->userExport;
+    }
+
+    /**
+     * Se o login por passkey está ligado.
+     *
+     * Além do toggle, o model de usuário precisa declarar `HasPasskeys`. Assim
+     * um projeto que atualiza o package sem declarar o contrato continua como
+     * estava, em vez de quebrar no login.
+     */
+    public function hasPasskeys(): bool
+    {
+        return $this->passkeys && is_subclass_of(cms_filament_user_model(), HasPasskeys::class);
     }
 
     public function register(Panel $panel): void
@@ -216,13 +243,44 @@ class CmsFilamentPlugin implements Plugin
                 AppAuthentication::make()->recoverable(),
                 EmailAuthentication::make(),
             ]);
-
-            // A gestão do segundo fator vive na página de perfil: sem ela o
-            // usuário não teria onde cadastrar o app autenticador.
-            if ($this->profile && ! $panel->hasProfile()) {
-                $panel->profile();
-            }
         }
+
+        $passkeys = $this->hasPasskeys();
+
+        if ($passkeys) {
+            $this->registerPasskeys($panel);
+        }
+
+        // A gestão do segundo fator e das passkeys vive na página de perfil:
+        // sem ela o usuário não teria onde cadastrar o app autenticador nem a
+        // passkey.
+        if ($this->profile && ($this->multiFactorAuthentication || $passkeys) && ! $panel->hasProfile()) {
+            $panel->profile($passkeys ? EditProfile::class : FilamentEditProfile::class);
+        }
+    }
+
+    /**
+     * Login por passkey: rotas públicas do painel e o botão na tela de login.
+     *
+     * As rotas ficam dentro do painel (`/painel/passkeys/...`), com os
+     * middlewares dele, para que o login entre pelo guard certo. O throttle
+     * limita quem tenta adivinhar credenciais.
+     */
+    protected function registerPasskeys(Panel $panel): void
+    {
+        $panel
+            ->routes(fn () => Route::prefix('passkeys')
+                ->name('cms-filament.passkeys.')
+                ->middleware('throttle:10,1')
+                ->group(function (): void {
+                    Route::get('opcoes', GeneratePasskeyAuthenticationOptionsController::class)->name('options');
+                    Route::post('entrar', PasskeyLoginController::class)->name('login');
+                }))
+            ->renderHook(
+                PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+                // @phpstan-ignore-next-line argument.type (view registrada pelo ServiceProvider)
+                fn (): View => view('cms-filament::passkeys.login'),
+            );
     }
 
     public function boot(Panel $panel): void
