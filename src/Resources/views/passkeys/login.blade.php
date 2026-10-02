@@ -42,35 +42,41 @@
     }"
     x-show="supported"
     x-cloak
-    style="display: flex; flex-direction: column; gap: 1rem;"
 >
-    <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--gray-500);">
-        <span style="flex: 1; height: 1px; background: currentColor; opacity: 0.3;"></span>
-        ou
-        <span style="flex: 1; height: 1px; background: currentColor; opacity: 0.3;"></span>
-    </div>
+    {{--
+        O flex fica num div interno: o x-show tira o display do elemento em que
+        está, e com ele ia o flex e o gap. O gap é o mesmo do formulário do
+        Filament (1.5rem), para o "ou" ficar à mesma distância dos dois botões.
+    --}}
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; font-size: 0.875rem; color: var(--gray-500);">
+            <span style="flex: 1; height: 1px; background: currentColor; opacity: 0.3;"></span>
+            ou
+            <span style="flex: 1; height: 1px; background: currentColor; opacity: 0.3;"></span>
+        </div>
 
-    <x-filament::button
-        type="button"
-        color="gray"
-        outlined
-        :icon="\Filament\Support\Icons\Heroicon::OutlinedFingerPrint"
-        x-on:click="login"
-        x-bind:disabled="loading"
-        style="width: 100%;"
-    >
-        Entrar com passkey
-    </x-filament::button>
+        <x-filament::button
+            type="button"
+            color="gray"
+            outlined
+            :icon="\Filament\Support\Icons\Heroicon::OutlinedFingerPrint"
+            x-on:click="login"
+            x-bind:disabled="loading"
+            style="width: 100%;"
+        >
+            Entrar com passkey
+        </x-filament::button>
 
-    @if (session()->has(PasskeyLoginController::ERROR_SESSION_KEY))
-        <p style="font-size: 0.875rem; color: var(--danger-600); text-align: center;" x-show="! failed">
-            {{ session(PasskeyLoginController::ERROR_SESSION_KEY) }}
+        @if (session()->has(PasskeyLoginController::ERROR_SESSION_KEY))
+            <p style="font-size: 0.875rem; color: var(--danger-600); text-align: center;" x-show="! failed">
+                {{ session(PasskeyLoginController::ERROR_SESSION_KEY) }}
+            </p>
+        @endif
+
+        <p style="font-size: 0.875rem; color: var(--danger-600); text-align: center;" x-show="failed" x-cloak>
+            Não foi possível usar a passkey. Tente de novo.
         </p>
-    @endif
-
-    <p style="font-size: 0.875rem; color: var(--danger-600); text-align: center;" x-show="failed" x-cloak>
-        Não foi possível usar a passkey. Tente de novo.
-    </p>
+    </div>
 
     <form x-ref="form" method="POST" action="{{ $panel->route('cms-filament.passkeys.login') }}" style="display: none;">
         @csrf

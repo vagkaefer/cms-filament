@@ -5,6 +5,13 @@ Todas as mudanças relevantes deste package são documentadas aqui.
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/)
 e o versionamento segue [SemVer](https://semver.org/lang/pt-BR/).
 
+## [0.1.3] - 2026-10-01
+
+### Corrigido
+
+- Login: o "ou" ficava colado no botão da passkey. O `x-show` tirava o flex
+  do bloco, e agora o espaço é o mesmo dos campos do formulário (1.5rem).
+
 ## [0.1.2] - 2026-10-01
 
 ### Adicionado
